@@ -48,12 +48,14 @@ struct IQrecord {
 void readData(struct IQrecord *batch, int IQcount);
 void processData(struct IQrecord *batch, int IQcount);
 void driverInteract(struct IQrecord *batch, int IQcount, int *fd);
+void findErrorRate(struct IQrecord *batch, int IQcount);
 double decConverter(double number);
+void decToBinary(int n, int *buffer);
 void unsignedDectoBinary(double realNum, int fracBits, int intBits, int *output, bool isNegative);
 double conversionOutput(int *output, int length);
 
 uint16_t write_buf[8];
-uint16_t read_buf[4];
+char read_buf[100];
 
 int main(int argc, char **argv)
 {
@@ -62,13 +64,13 @@ int main(int argc, char **argv)
 
     printf("Welcome to this program!\n");
     //Open the device driver folder
-    /*
+
     fd = open("/dev/tutDevice", O_RDWR); //fdopen read/write
     if (fd < 0){
-        printf("Cannot open device file...\n");
-        return 0;
+        printf("Cannot open device driver file...\n");
+        //return 0;
     }
-*/
+
     while(1){
         printf("******* Please Enter Your Options\n");
         printf("      1. Start Program\n");
@@ -80,16 +82,17 @@ int main(int argc, char **argv)
             printf("How many total I-Q values are tested?:\n");
             scanf(" %d" , &IQcount);
 
-            struct IQrecord batch[IQcount];
-            printf("IQcount: %d\n", IQcount);
+            struct IQrecord batch[IQcount]; //Has 4
 
+            printf("Number of IQ Pairs Checked: %d\n", IQcount);
             readData(batch, IQcount);
             printf("Read data done.\n");
             processData(batch, IQcount);
             printf("Process data done.\n");
-            scanf(" %[^\t\n]d" , write_buf);
-            write(fd, write_buf, strlen(write_buf)+1);
-            printf("Done");
+            driverInteract(batch, IQcount, fd);
+            printf("Driver Interact done.\n");
+            findErrorRate(batch, IQcount);
+            printf("Error Rate found.\n");
             break;
         }
         else if(option == '2'){
@@ -109,7 +112,7 @@ int main(int argc, char **argv)
 
 void readData(struct IQrecord *batch, int IQcount){
     int count;
-    FILE *my_file = fopen("sergeyData.csv", "r");
+    FILE *my_file = fopen("sergeyData.csv", "r"); //Read mode
 
     if(my_file == NULL){
         printf("Could not open data file!");
@@ -125,7 +128,6 @@ void readData(struct IQrecord *batch, int IQcount){
             if (got != 3) break; // wrong number of items maybe end of file
         }
     }
-
     fclose(my_file);
 }
 
@@ -141,6 +143,7 @@ void processData(struct IQrecord *batch, int IQcount)
 
 void driverInteract(struct IQrecord *batch, int IQcount, int *fd)
 {
+    int binaryBufferProcessed[16];
     for (int count = 0; count < IQcount/4; ++count)
     {
         write_buf[0] = batch[count].convertedIValue;
@@ -152,7 +155,43 @@ void driverInteract(struct IQrecord *batch, int IQcount, int *fd)
         write_buf[6] = batch[count+2].convertedQValue;
         write_buf[7] = batch[count+3].convertedQValue;
         write(fd, write_buf, strlen(write_buf)+1);
+
+        read(fd, read_buf, 1000); //Converts string to decimal then decimal to a int array [2 base 10 -> '1''0']
+        decToBinary(atoi(read_buf), binaryBufferProcessed);
+
+        batch[count].outputValue[0] = binaryBufferProcessed[0];
+        batch[count].outputValue[1] = binaryBufferProcessed[1];
+        batch[count].outputValue[2] = binaryBufferProcessed[2];
+        batch[count].outputValue[3] = binaryBufferProcessed[3];
+        batch[count+1].outputValue[0] = binaryBufferProcessed[4];
+        batch[count+1].outputValue[1] = binaryBufferProcessed[5];
+        batch[count+1].outputValue[2] = binaryBufferProcessed[6];
+        batch[count+1].outputValue[3] = binaryBufferProcessed[7];
+        batch[count+2].outputValue[0] = binaryBufferProcessed[8];
+        batch[count+2].outputValue[1] = binaryBufferProcessed[9];
+        batch[count+2].outputValue[2] = binaryBufferProcessed[10];
+        batch[count+2].outputValue[3] = binaryBufferProcessed[11];
+        batch[count+3].outputValue[0] = binaryBufferProcessed[12];
+        batch[count+3].outputValue[1] = binaryBufferProcessed[13];
+        batch[count+3].outputValue[2] = binaryBufferProcessed[14];
+        batch[count+3].outputValue[3] = binaryBufferProcessed[15];
     }
+}
+
+void findErrorRate(struct IQrecord *batch, int IQcount)
+{
+    int correctBits, incorrectBits, errorRate;
+    for (int count = 0; count < IQcount; ++count)
+    {
+        if(batch[count].outputValue == batch[count].predeterminedValue){
+            correctBits++;
+        } else if(batch[count].outputValue != batch[count].predeterminedValue)
+        {
+            incorrectBits++;
+        }
+    }
+    errorRate = incorrectBits / (incorrectBits+correctBits);
+    printf("The error rate is: %lf\n", errorRate);
 }
 
 // Takes a number, number of bits to represent fraction, number of bits to represent integer.
@@ -173,8 +212,6 @@ double decConverter(double number)
 
     //This function converts the decimal number to the correct binary QM.N format
     unsignedDectoBinary(number, fracBits, intBits, &output, isNegative);
-
-    double numOutput;
 
     //This functions displays the converted binary QM.N as either a binary number or a decimal number
     return conversionOutput(&output,fracBits+intBits);
@@ -235,4 +272,17 @@ double conversionOutput(int *output, int length)
     }
 
     return integerSum;
+}
+
+void decToBinary(int n, int *buffer)
+{
+    // counter for binary array
+    int i = 0;
+    while (n > 0) {
+
+        // storing remainder in binary array
+        buffer[i] = n % 2;
+        n = n / 2;
+        i++;
+    }
 }
