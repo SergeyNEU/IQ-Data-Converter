@@ -157,7 +157,11 @@ void driverInteract(struct IQrecord *batch, int IQcount, int *fd)
         write(fd, write_buf, strlen(write_buf)+1);
 
         read(fd, read_buf, 1000); //Converts string to decimal then decimal to a int array [2 base 10 -> '1''0']
-        decToBinary(atoi(read_buf), binaryBufferProcessed);
+
+        memcpy(binaryBufferProcessed, read_buf, 16)
+
+
+        decToBinary(atoi(read_buf[31:15]), binaryBufferProcessed);
 
         batch[count].outputValue[0] = binaryBufferProcessed[0];
         batch[count].outputValue[1] = binaryBufferProcessed[1];
