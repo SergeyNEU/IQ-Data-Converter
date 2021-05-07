@@ -143,7 +143,7 @@ void processData(struct IQrecord *batch, int IQcount)
 
 void driverInteract(struct IQrecord *batch, int IQcount, int *fd)
 {
-    int binaryBufferProcessed[16];
+    char binaryBufferProcessed[16];
     for (int count = 0; count < IQcount/4; ++count)
     {
         write_buf[0] = batch[count].convertedIValue;
@@ -156,29 +156,25 @@ void driverInteract(struct IQrecord *batch, int IQcount, int *fd)
         write_buf[7] = batch[count+3].convertedQValue;
         write(fd, write_buf, strlen(write_buf)+1);
 
-        read(fd, read_buf, 1000); //Converts string to decimal then decimal to a int array [2 base 10 -> '1''0']
+        read(fd, read_buf, 100); //Reads in 32bit bits, first 16 are just control code.
+        int offset = 16;
 
-        memcpy(binaryBufferProcessed, read_buf, 16)
-
-
-        decToBinary(atoi(read_buf[31:15]), binaryBufferProcessed);
-
-        batch[count].outputValue[0] = binaryBufferProcessed[0];
-        batch[count].outputValue[1] = binaryBufferProcessed[1];
-        batch[count].outputValue[2] = binaryBufferProcessed[2];
-        batch[count].outputValue[3] = binaryBufferProcessed[3];
-        batch[count+1].outputValue[0] = binaryBufferProcessed[4];
-        batch[count+1].outputValue[1] = binaryBufferProcessed[5];
-        batch[count+1].outputValue[2] = binaryBufferProcessed[6];
-        batch[count+1].outputValue[3] = binaryBufferProcessed[7];
-        batch[count+2].outputValue[0] = binaryBufferProcessed[8];
-        batch[count+2].outputValue[1] = binaryBufferProcessed[9];
-        batch[count+2].outputValue[2] = binaryBufferProcessed[10];
-        batch[count+2].outputValue[3] = binaryBufferProcessed[11];
-        batch[count+3].outputValue[0] = binaryBufferProcessed[12];
-        batch[count+3].outputValue[1] = binaryBufferProcessed[13];
-        batch[count+3].outputValue[2] = binaryBufferProcessed[14];
-        batch[count+3].outputValue[3] = binaryBufferProcessed[15];
+        batch[count].outputValue[0] = read_buf[0+offset];
+        batch[count].outputValue[1] = read_buf[1+offset];
+        batch[count].outputValue[2] = read_buf[2+offset];
+        batch[count].outputValue[3] = read_buf[3+offset];
+        batch[count+1].outputValue[0] = read_buf[4+offset];
+        batch[count+1].outputValue[1] = read_buf[5+offset];
+        batch[count+1].outputValue[2] = read_buf[6+offset];
+        batch[count+1].outputValue[3] = read_buf[7+offset];
+        batch[count+2].outputValue[0] = read_buf[8+offset];
+        batch[count+2].outputValue[1] = read_buf[9+offset];
+        batch[count+2].outputValue[2] = read_buf[10+offset];
+        batch[count+2].outputValue[3] = read_buf[11+offset];
+        batch[count+3].outputValue[0] = read_buf[12+offset];
+        batch[count+3].outputValue[1] = read_buf[13+offset];
+        batch[count+3].outputValue[2] = read_buf[14+offset];
+        batch[count+3].outputValue[3] = read_buf[15+offset];
     }
 }
 
